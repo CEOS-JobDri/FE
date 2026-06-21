@@ -28,3 +28,19 @@ export interface AuthResponse {
 // export interface EmailVerificationVerifyResponse {
 //   emailVerificationToken: string;
 // }
+
+// src/services/admin.ts
+
+// 💡 타입 정의 (백엔드 스펙에 맞춰 수정해주세요)
+export interface Candidate {
+  id: number;
+  name: string;
+  part: "FRONTEND" | "BACKEND";
+  team: string;
+}
+
+export interface CreateCandidateReq {
+  name: string;
+  part: "FRONTEND" | "BACKEND";
+  team: string;
+}
