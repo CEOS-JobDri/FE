@@ -10,21 +10,21 @@ import { saveToken } from "@/utils/auth";
 
 export default function LoginModal() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
-  const [emailFocused, setEmailFocused] = useState(false);
+  const [loginIdFocused, setLoginIdFocused] = useState(false);
   const [pwFocused, setPwFocused] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const isActive = email.length > 0 && password.length > 0;
+  const isActive = loginId.length > 0 && password.length > 0;
 
   const handleLogin = async () => {
     if (!isActive || loading) return;
     setError("");
     setLoading(true);
     try {
-      const { accessToken } = await login({ email, password });
+      const { accessToken } = await login({ loginId, password });
       saveToken(accessToken);
       router.push("/main");
     } catch (e) {
@@ -52,7 +52,7 @@ export default function LoginModal() {
           <div
             className={clsx(
               "flex items-center gap-2 border rounded-10 px-4 py-3 bg-fill-quaternary-default transition-colors",
-              emailFocused
+              loginIdFocused
                 ? "border-fill-primary-default"
                 : "border-line-neutral-default",
             )}
@@ -63,11 +63,11 @@ export default function LoginModal() {
             />
             <input
               className="w-full bg-transparent outline-none text-sub14-reg text-text-neutral-default placeholder:text-text-neutral-disabled"
-              placeholder="이메일을 입력해주세요."
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onFocus={() => setEmailFocused(true)}
-              onBlur={() => setEmailFocused(false)}
+              placeholder="아이디를 입력해주세요."
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+              onFocus={() => setLoginIdFocused(true)}
+              onBlur={() => setLoginIdFocused(false)}
             />
           </div>
 

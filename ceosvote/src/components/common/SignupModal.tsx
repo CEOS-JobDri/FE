@@ -6,8 +6,8 @@ import clsx from "clsx";
 import Icon from "@/components/common/icons/Icon";
 import Button from "@/components/common/Button";
 import {
-  sendEmailVerification,
-  verifyEmailCode,
+  // sendEmailVerification,
+  // verifyEmailCode,
   signup,
 } from "@/services/auth";
 import { saveToken } from "@/utils/auth";
@@ -41,6 +41,8 @@ const MEMBERS: Record<Part, string[]> = {
     "오지송",
   ],
 };
+
+const TEAMS = ["JOBDRI", "IPX", "GROUPEAT", "CONX", "DITDA"] as const;
 
 function InputField({
   label,
@@ -104,51 +106,56 @@ export default function SignupModal() {
   const [step, setStep] = useState<Step>("email");
 
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  // const [code, setCode] = useState("");
   const [selectedPart, setSelectedPart] = useState<Part>("프론트엔드");
   const [selectedName, setSelectedName] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState<(typeof TEAMS)[number]>(
+    TEAMS[0],
+  );
   const [password, setPassword] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [confirm, setConfirm] = useState("");
 
   const [emailFocused, setEmailFocused] = useState(false);
-  const [codeFocused, setCodeFocused] = useState(false);
+  // const [codeFocused, setCodeFocused] = useState(false);
   const [pwFocused, setPwFocused] = useState(false);
+  const [idFocused, setIdFocused] = useState(false);
   const [confirmFocused, setConfirmFocused] = useState(false);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSendCode = async () => {
-    if (!email || loading) return;
-    setError("");
-    setLoading(true);
-    try {
-      await sendEmailVerification({ email });
-      setStep("verify");
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "인증번호 발송에 실패했습니다.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const handleSendCode = async () => {
+  //   if (!email || loading) return;
+  //   setError("");
+  //   setLoading(true);
+  //   try {
+  //     await sendEmailVerification({ email });
+  //     setStep("verify");
+  //   } catch (e) {
+  //     setError(
+  //       e instanceof Error ? e.message : "인증번호 발송에 실패했습니다.",
+  //     );
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  const handleVerifyCode = async () => {
-    if (!code || loading) return;
-    setError("");
-    setLoading(true);
-    try {
-      await verifyEmailCode({ email, code });
-      setStep("name");
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "인증번호가 올바르지 않습니다.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const handleVerifyCode = async () => {
+  //   if (!code || loading) return;
+  //   setError("");
+  //   setLoading(true);
+  //   try {
+  //     await verifyEmailCode({ email, code });
+  //     setStep("name");
+  //   } catch (e) {
+  //     setError(
+  //       e instanceof Error ? e.message : "인증번호가 올바르지 않습니다.",
+  //     );
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleSignup = async () => {
     if (!password || !confirm || !selectedName || loading) return;
@@ -159,12 +166,14 @@ export default function SignupModal() {
     setError("");
     setLoading(true);
     try {
-      const { accessToken } = await signup({
+      await signup({
         name: selectedName,
         email,
         password,
+        loginId,
+        part: selectedPart === "프론트엔드" ? "FRONTEND" : "BACKEND",
+        team: selectedTeam,
       });
-      saveToken(accessToken);
       router.push("/main");
     } catch (e) {
       setError(e instanceof Error ? e.message : "회원가입에 실패했습니다.");
@@ -202,17 +211,17 @@ export default function SignupModal() {
               <p className="text-cap12-med text-red-primary">{error}</p>
             )}
             <Button
-              label={loading ? "발송 중..." : "인증번호 발송"}
-              styleType="tertiary"
+              label={"다음으로"}
+              styleType="secondary"
               size="large"
               active={email.length > 0 && !loading}
               className="w-full justify-center"
-              onClick={handleSendCode}
+              onClick={() => setStep("name")}
             />
           </div>
         )}
 
-        {/* Step 2: 인증번호 */}
+        {/* Step 2: 인증번호
         {step === "verify" && (
           <div className="flex flex-col gap-4 w-full">
             <InputField
@@ -247,7 +256,7 @@ export default function SignupModal() {
               onClick={handleVerifyCode}
             />
           </div>
-        )}
+        )} */}
 
         {/* Step 3: 이름 선택 */}
         {step === "name" && (
@@ -292,13 +301,33 @@ export default function SignupModal() {
                 </button>
               ))}
             </div>
+            <div>
+              <p className="neurimbo-body m-2">팀</p>
+              <div className="grid grid-cols-4 gap-2 ">
+                {TEAMS.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setSelectedTeam(name)}
+                    className={clsx(
+                      "py-2 rounded-8 text-sub14-med transition-colors border",
+                      selectedTeam === name
+                        ? "bg-fill-primary-default text-text-neutral-white border-fill-primary-default"
+                        : "bg-fill-quaternary-default text-text-neutral-description border-line-neutral-default hover:border-fill-primary-default",
+                    )}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {error && (
               <p className="text-cap12-med text-red-primary">{error}</p>
             )}
             <Button
               label="다음"
-              styleType="tertiary"
+              styleType="secondary"
               size="large"
               active={selectedName.length > 0}
               className="w-full justify-center"
@@ -310,6 +339,16 @@ export default function SignupModal() {
         {/* Step 4: 비밀번호 */}
         {step === "password" && (
           <div className="flex flex-col gap-4 w-full">
+            <InputField
+              label="아이디"
+              type="loginId"
+              value={loginId}
+              onChange={setLoginId}
+              focused={idFocused}
+              onFocus={() => setIdFocused(true)}
+              onBlur={() => setIdFocused(false)}
+              iconType="PASSWORD"
+            />
             <InputField
               label="비밀번호"
               type="password"
@@ -335,7 +374,7 @@ export default function SignupModal() {
             )}
             <Button
               label={loading ? "가입 중..." : "회원가입"}
-              styleType="tertiary"
+              styleType="secondary"
               size="large"
               active={password.length > 0 && confirm.length > 0 && !loading}
               className="w-full justify-center"

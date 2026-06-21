@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/signup"];
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/landing"];
 
 export function proxy(request: NextRequest) {
   const token = request.cookies.get("accessToken")?.value;
@@ -20,5 +20,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon\\.ico).*)"],
+  // matcher: ["/((?!_next/static|_next/image|favicon\\.ico).*)"],
+  matcher: [],
 };
