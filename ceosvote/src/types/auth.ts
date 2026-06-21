@@ -14,6 +14,7 @@ export interface SignupRequest {
 
 export interface AuthResponse {
   accessToken: string;
+  candidateId: number | null;
 }
 
 // export interface EmailVerificationSendRequest {
@@ -29,18 +30,13 @@ export interface AuthResponse {
 //   emailVerificationToken: string;
 // }
 
-// src/services/admin.ts
-
-// 💡 타입 정의 (백엔드 스펙에 맞춰 수정해주세요)
 export interface Candidate {
-  id: number;
+  candidateId: number;
   name: string;
-  part: "FRONTEND" | "BACKEND";
-  team: string;
+  voteCount: number;
 }
 
 export interface CreateCandidateReq {
   name: string;
   part: "FRONTEND" | "BACKEND";
-  team: string;
 }

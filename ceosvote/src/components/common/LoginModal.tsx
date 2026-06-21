@@ -18,14 +18,14 @@ export default function LoginModal() {
   const [loading, setLoading] = useState(false);
 
   const isActive = loginId.length > 0 && password.length > 0;
-
   const handleLogin = async () => {
     if (!isActive || loading) return;
     setError("");
     setLoading(true);
     try {
-      const { accessToken } = await login({ loginId, password });
-      saveToken(accessToken);
+      const responseData = await login({ loginId, password });
+      saveToken(responseData.accessToken);
+      localStorage.setItem("candidateId", String(responseData.candidateId));
       router.push("/main");
     } catch (e) {
       setError(e instanceof Error ? e.message : "로그인에 실패했습니다.");
@@ -33,7 +33,6 @@ export default function LoginModal() {
       setLoading(false);
     }
   };
-
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background-page">
       <div className="flex flex-col items-center gap-8 bg-fill-quaternary-default rounded-20 px-10 py-10 w-70 sm:w-100 shadow-modal">
