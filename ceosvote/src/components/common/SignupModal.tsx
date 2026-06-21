@@ -6,8 +6,8 @@ import clsx from "clsx";
 import Icon from "@/components/common/icons/Icon";
 import Button from "@/components/common/Button";
 import {
-  sendEmailVerification,
-  verifyEmailCode,
+  // sendEmailVerification,
+  // verifyEmailCode,
   signup,
 } from "@/services/auth";
 import { saveToken } from "@/utils/auth";
@@ -41,6 +41,8 @@ const MEMBERS: Record<Part, string[]> = {
     "오지송",
   ],
 };
+
+const TEAMS = ["JOBDRI", "IPX", "GROUPEAT", "CONX", "DITDA"] as const;
 
 function InputField({
   label,
@@ -104,51 +106,22 @@ export default function SignupModal() {
   const [step, setStep] = useState<Step>("email");
 
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
   const [selectedPart, setSelectedPart] = useState<Part>("프론트엔드");
   const [selectedName, setSelectedName] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState<(typeof TEAMS)[number]>(
+    TEAMS[0],
+  );
   const [password, setPassword] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [confirm, setConfirm] = useState("");
 
   const [emailFocused, setEmailFocused] = useState(false);
-  const [codeFocused, setCodeFocused] = useState(false);
   const [pwFocused, setPwFocused] = useState(false);
+  const [idFocused, setIdFocused] = useState(false);
   const [confirmFocused, setConfirmFocused] = useState(false);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const handleSendCode = async () => {
-    if (!email || loading) return;
-    setError("");
-    setLoading(true);
-    try {
-      await sendEmailVerification({ email });
-      setStep("verify");
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "인증번호 발송에 실패했습니다.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    if (!code || loading) return;
-    setError("");
-    setLoading(true);
-    try {
-      await verifyEmailCode({ email, code });
-      setStep("name");
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "인증번호가 올바르지 않습니다.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSignup = async () => {
     if (!password || !confirm || !selectedName || loading) return;
@@ -159,19 +132,38 @@ export default function SignupModal() {
     setError("");
     setLoading(true);
     try {
-      const { accessToken } = await signup({
+      await signup({
         name: selectedName,
         email,
         password,
+        loginId,
+        part: selectedPart === "프론트엔드" ? "FRONTEND" : "BACKEND",
+        team: selectedTeam,
       });
-      saveToken(accessToken);
+      // 성공 시 로그인 페이지 등 적절한 곳으로 이동
       router.push("/main");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "회원가입에 실패했습니다.");
+      const errorMessage =
+        e instanceof Error ? e.message : "회원가입에 실패했습니다.";
+      setError(errorMessage);
+
+      // 💡 409 에러이거나 중복 관련 에러일 경우 첫 스텝(email)으로 이동
+      if (
+        errorMessage.includes("409") ||
+        errorMessage.includes("중복") ||
+        errorMessage.includes("이미")
+      ) {
+        setStep("email");
+        setPassword(""); // 안전을 위해 비밀번호 초기화
+        setConfirm("");
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  const isConfirmDirty = confirm.length > 0;
+  const isPasswordMatch = password === confirm;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background-page">
@@ -202,54 +194,20 @@ export default function SignupModal() {
               <p className="text-cap12-med text-red-primary">{error}</p>
             )}
             <Button
-              label={loading ? "발송 중..." : "인증번호 발송"}
-              styleType="tertiary"
+              label={"다음으로"}
+              styleType="secondary"
               size="large"
               active={email.length > 0 && !loading}
               className="w-full justify-center"
-              onClick={handleSendCode}
+              onClick={() => {
+                setError(""); // 넘어갈 때 에러 메시지 초기화
+                setStep("name");
+              }}
             />
           </div>
         )}
 
-        {/* Step 2: 인증번호 */}
-        {step === "verify" && (
-          <div className="flex flex-col gap-4 w-full">
-            <InputField
-              label="이메일"
-              value={email}
-              onChange={() => {}}
-              focused={false}
-              onFocus={() => {}}
-              onBlur={() => {}}
-              iconType="PROFILE"
-              disabled
-            />
-            <InputField
-              label="인증번호"
-              value={code}
-              onChange={setCode}
-              focused={codeFocused}
-              onFocus={() => setCodeFocused(true)}
-              onBlur={() => setCodeFocused(false)}
-              iconType="PASSWORD"
-              placeholder="인증번호를 입력해주세요."
-            />
-            {error && (
-              <p className="text-cap12-med text-red-primary">{error}</p>
-            )}
-            <Button
-              label={loading ? "확인 중..." : "인증번호 확인"}
-              styleType="tertiary"
-              size="large"
-              active={code.length > 0 && !loading}
-              className="w-full justify-center"
-              onClick={handleVerifyCode}
-            />
-          </div>
-        )}
-
-        {/* Step 3: 이름 선택 */}
+        {/* Step 3: 이름 및 팀 선택 */}
         {step === "name" && (
           <div className="flex flex-col gap-4 w-full">
             {/* 파트 탭 */}
@@ -293,23 +251,67 @@ export default function SignupModal() {
               ))}
             </div>
 
+            {/* 팀 그리드 */}
+            <div>
+              <p className="neurimbo-body m-2">팀</p>
+              <div className="grid grid-cols-4 gap-2">
+                {TEAMS.map((teamName) => (
+                  <button
+                    key={teamName}
+                    type="button"
+                    onClick={() => setSelectedTeam(teamName)}
+                    className={clsx(
+                      "py-2 rounded-8 text-sub14-med transition-colors border",
+                      selectedTeam === teamName
+                        ? "bg-fill-primary-default text-text-neutral-white border-fill-primary-default"
+                        : "bg-fill-quaternary-default text-text-neutral-description border-line-neutral-default hover:border-fill-primary-default",
+                    )}
+                  >
+                    {teamName}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {error && (
               <p className="text-cap12-med text-red-primary">{error}</p>
             )}
-            <Button
-              label="다음"
-              styleType="tertiary"
-              size="large"
-              active={selectedName.length > 0}
-              className="w-full justify-center"
-              onClick={() => setStep("password")}
-            />
+
+            {/* 💡 이전/다음 버튼 그룹 */}
+            <div className="flex gap-2 w-full mt-2">
+              <Button
+                label="이전으로"
+                styleType="tertiary"
+                size="large"
+                active={true}
+                className="w-full justify-center flex-1"
+                onClick={() => setStep("email")}
+              />
+              <Button
+                label="다음"
+                styleType="secondary"
+                size="large"
+                active={selectedName.length > 0 && selectedTeam.length > 0}
+                className="w-full justify-center flex-1"
+                onClick={() => setStep("password")}
+              />
+            </div>
           </div>
         )}
 
         {/* Step 4: 비밀번호 */}
         {step === "password" && (
           <div className="flex flex-col gap-4 w-full">
+            <InputField
+              label="아이디"
+              type="text"
+              value={loginId}
+              onChange={setLoginId}
+              focused={idFocused}
+              onFocus={() => setIdFocused(true)}
+              onBlur={() => setIdFocused(false)}
+              iconType="PROFILE"
+            />
             <InputField
               label="비밀번호"
               type="password"
@@ -333,14 +335,39 @@ export default function SignupModal() {
             {error && (
               <p className="text-cap12-med text-red-primary">{error}</p>
             )}
-            <Button
-              label={loading ? "가입 중..." : "회원가입"}
-              styleType="tertiary"
-              size="large"
-              active={password.length > 0 && confirm.length > 0 && !loading}
-              className="w-full justify-center"
-              onClick={handleSignup}
-            />
+            {isConfirmDirty && !isPasswordMatch && (
+              <p className="text-cap12-med text-red-primary ml-1">
+                비밀번호가 일치하지 않습니다.
+              </p>
+            )}
+
+            {/* 💡 이전/가입 버튼 그룹 */}
+            <div className="flex gap-2 w-full mt-2">
+              <Button
+                label="이전으로"
+                styleType="tertiary"
+                size="large"
+                active={!loading}
+                className="w-full justify-center flex-1"
+                onClick={() => {
+                  setError("");
+                  setStep("name");
+                }}
+              />
+              <Button
+                label={loading ? "가입 중..." : "회원가입"}
+                styleType="secondary"
+                size="large"
+                active={
+                  loginId.length > 0 &&
+                  password.length > 0 &&
+                  confirm.length > 0 &&
+                  !loading
+                }
+                className="w-full justify-center flex-1"
+                onClick={handleSignup}
+              />
+            </div>
           </div>
         )}
       </div>
