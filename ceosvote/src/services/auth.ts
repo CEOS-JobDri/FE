@@ -70,7 +70,12 @@ async function fetchAdminApi<T>(
 
   const text = await res.text();
   if (!text) return {} as T;
-  return JSON.parse(text);
+
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return text as unknown as T;
+  }
 }
 
 export async function getCandidates(
