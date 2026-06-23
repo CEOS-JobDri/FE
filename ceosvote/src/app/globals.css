@@ -609,6 +609,30 @@ button.vote-entry-card:focus-visible {
   margin-top: 0;
 }
 
+.demo-result-panel {
+  gap: 55px;
+}
+
+.demo-result-panel .fe-result-ranking {
+  align-self: center;
+  gap: 0;
+}
+
+.demo-result-panel .fe-result-row {
+  width: 330px;
+  gap: 11px;
+}
+
+.demo-result-panel .fe-result-rank,
+.demo-result-panel .fe-result-card {
+  height: 60px;
+}
+
+.demo-result-panel .fe-result-rank {
+  width: 60px;
+  min-width: 60px;
+}
+
 .fe-profile-card {
   width: 100%;
 }

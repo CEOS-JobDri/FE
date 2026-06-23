@@ -21,6 +21,11 @@ type VoteCardItem = {
   iconSrc: string;
 };
 
+type RankedVoteItem = {
+  id: string;
+  name: string;
+};
+
 type DemoDayTeam = {
   id: string;
   name: string;
@@ -235,13 +240,22 @@ const initialPartLeaderResults: Record<PartLeaderPart, Record<string, number>> =
     be: createInitialPartLeaderResults(bePartLeaderCandidates),
   };
 
+const initialDemoDayResults = demoDayTeams.reduce<Record<string, number>>(
+  (results, team) => {
+    results[team.id] = 3;
+    return results;
+  },
+  {},
+);
+
 type VoteView =
   | "entry"
   | "partLeader"
   | "partLeaderVote"
   | "partLeaderResult"
   | "partLeaderProfile"
-  | "demoDayVote";
+  | "demoDayVote"
+  | "demoDayResult";
 
 function VoteCard({
   item,
@@ -280,10 +294,13 @@ export default function VoteClient() {
   const [partLeaderResults, setPartLeaderResults] = useState(
     initialPartLeaderResults,
   );
+  const [demoDayResults, setDemoDayResults] = useState(initialDemoDayResults);
   const activePartLabel = partLeaderLabels[activePart];
   const activeCandidates = partLeaderCandidates[activePart];
   const title =
-    view === "partLeaderResult"
+    view === "demoDayResult"
+      ? "데모데이 투표 결과"
+      : view === "partLeaderResult"
       ? `${activePartLabel} 파트장 투표 결과`
       : view === "partLeaderVote"
       ? `${activePartLabel} 파트장 투표`
@@ -294,7 +311,8 @@ export default function VoteClient() {
       : "투표하기";
   const isPartLeaderFlow =
     view === "partLeaderVote" || view === "partLeaderResult";
-  const isWideVoteFlow = isPartLeaderFlow || view === "demoDayVote";
+  const isWideVoteFlow =
+    isPartLeaderFlow || view === "demoDayVote" || view === "demoDayResult";
   const isProfileView = view === "partLeaderProfile";
   const selectedProfile =
     activeCandidates.find((candidate) => candidate.id === selectedProfileId) ??
@@ -315,6 +333,14 @@ export default function VoteClient() {
       },
     }));
     setView("partLeaderResult");
+  };
+
+  const handleSubmitDemoVote = (teamId: string) => {
+    setDemoDayResults((currentResults) => ({
+      ...currentResults,
+      [teamId]: (currentResults[teamId] ?? 0) + 1,
+    }));
+    setView("demoDayResult");
   };
 
   return (
@@ -360,7 +386,19 @@ export default function VoteClient() {
               }}
             />
           ) : view === "demoDayVote" ? (
-            <DemoDayVote />
+            <DemoDayVote
+              onSubmitVote={handleSubmitDemoVote}
+              onShowResult={() => setView("demoDayResult")}
+            />
+          ) : view === "demoDayResult" ? (
+            <VoteResultRanking
+              items={demoDayTeams}
+              results={demoDayResults}
+              ariaLabel="데모데이 투표 결과 순위"
+              className="demo-result-panel"
+              singleColumn
+              onBack={() => setView("demoDayVote")}
+            />
           ) : (
             <section className="vote-entry-list" aria-label={title}>
               {view === "partLeader"
@@ -479,7 +517,13 @@ function PartLeaderVote({
   );
 }
 
-function DemoDayVote() {
+function DemoDayVote({
+  onSubmitVote,
+  onShowResult,
+}: {
+  onSubmitVote: (teamId: string) => void;
+  onShowResult: () => void;
+}) {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const teamRows = [demoDayTeams.slice(0, 3), demoDayTeams.slice(3, 5)];
 
@@ -528,11 +572,19 @@ function DemoDayVote() {
           label="투표하기"
           size="large"
           className="fe-action-button fe-action-button-primary"
+          onClick={() => {
+            if (!selectedTeamId) {
+              return;
+            }
+
+            onSubmitVote(selectedTeamId);
+          }}
         />
         <Button
           label="결과보기"
           size="large"
           className="fe-action-button fe-action-button-result"
+          onClick={onShowResult}
         />
       </div>
     </section>
@@ -617,7 +669,32 @@ function PartLeaderResult({
   results: Record<string, number>;
   onBack: () => void;
 }) {
-  const ranking = [...candidates]
+  return (
+    <VoteResultRanking
+      items={candidates}
+      results={results}
+      ariaLabel={`${partLeaderLabels[part]} 파트장 투표 결과 순위`}
+      onBack={onBack}
+    />
+  );
+}
+
+function VoteResultRanking({
+  items,
+  results,
+  ariaLabel,
+  className = "",
+  singleColumn = false,
+  onBack,
+}: {
+  items: RankedVoteItem[];
+  results: Record<string, number>;
+  ariaLabel: string;
+  className?: string;
+  singleColumn?: boolean;
+  onBack: () => void;
+}) {
+  const ranking = [...items]
     .map((candidate) => ({
       ...candidate,
       count: results[candidate.id] ?? 0,
@@ -625,12 +702,14 @@ function PartLeaderResult({
     .sort((firstCandidate, secondCandidate) => {
       return secondCandidate.count - firstCandidate.count;
     });
-  const rankingColumns = [ranking.slice(0, 5), ranking.slice(5, 10)];
+  const rankingColumns = singleColumn
+    ? [ranking]
+    : [ranking.slice(0, 5), ranking.slice(5, 10)];
 
   return (
     <section
-      className="fe-result-panel"
-      aria-label={`${partLeaderLabels[part]} 파트장 투표 결과 순위`}
+      className={`fe-result-panel ${className}`}
+      aria-label={ariaLabel}
     >
       <div className="fe-result-ranking">
         {rankingColumns.map((column, columnIndex) => (
