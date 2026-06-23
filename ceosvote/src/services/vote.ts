@@ -12,18 +12,17 @@ const mockVotePoll: VotePoll = {
     {
       id: "crong",
       name: "크롱",
-      imageUrl: "/profile2.jpg",
+      imageUrl: "/profile1.jpg",
     },
     {
       id: "eddy",
       name: "에디",
-      imageUrl: "/profile3.jpg",
-      imageClassName: "scale-[1.35]",
+      imageUrl: "/profile1.jpg",
     },
     {
       id: "loopy",
       name: "루피",
-      imageUrl: "/profile4.jpg",
+      imageUrl: "/profile1.jpg",
     },
   ],
   results: {

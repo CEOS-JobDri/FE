@@ -12,7 +12,7 @@
   {
     "id": "crong",
     "name": "크롱",
-    "imageUrl": "/profile2.jpg",
+    "imageUrl": "/profile1.jpg",
     "species": "공룡",
     "gender": "남자",
     "home": "뽀롱뽀롱 숲속 마을",
@@ -22,8 +22,7 @@
   {
     "id": "eddy",
     "name": "에디",
-    "imageUrl": "/profile3.jpg",
-    "imageClassName": "scale-[1.35]",
+    "imageUrl": "/profile1.jpg",
     "species": "사막여우",
     "gender": "남자",
     "home": "뽀롱뽀롱 숲속 마을",
@@ -33,7 +32,7 @@
   {
     "id": "loopy",
     "name": "루피",
-    "imageUrl": "/profile4.jpg",
+    "imageUrl": "/profile1.jpg",
     "species": "비버",
     "gender": "여자",
     "home": "뽀롱뽀롱 숲속 마을",
