@@ -351,7 +351,9 @@ export default function VoteClient() {
         <main
           className={`vote-main ${
             isWideVoteFlow ? "vote-main-fe" : ""
-          } ${isProfileView ? "vote-main-profile" : ""}`}
+          } ${isProfileView ? "vote-main-profile" : ""} ${
+            view === "partLeader" ? "vote-main-part-select" : ""
+          } ${view === "entry" ? "vote-main-entry" : ""}`}
           aria-label={isProfileView ? `${activePartLabel} 프로필 보기` : undefined}
           aria-labelledby={isProfileView ? undefined : "vote-main-title"}
         >
