@@ -314,6 +314,11 @@ export default function VoteClient() {
   const isWideVoteFlow =
     isPartLeaderFlow || view === "demoDayVote" || view === "demoDayResult";
   const isProfileView = view === "partLeaderProfile";
+  const isVoteContentView =
+    view === "partLeaderVote" ||
+    view === "partLeaderResult" ||
+    view === "demoDayVote" ||
+    view === "demoDayResult";
   const selectedProfile =
     activeCandidates.find((candidate) => candidate.id === selectedProfileId) ??
     activeCandidates[0];
@@ -353,7 +358,9 @@ export default function VoteClient() {
             isWideVoteFlow ? "vote-main-fe" : ""
           } ${isProfileView ? "vote-main-profile" : ""} ${
             view === "partLeader" ? "vote-main-part-select" : ""
-          } ${view === "entry" ? "vote-main-entry" : ""}`}
+          } ${view === "entry" ? "vote-main-entry" : ""} ${
+            isVoteContentView ? "vote-main-choice" : ""
+          }`}
           aria-label={isProfileView ? `${activePartLabel} 프로필 보기` : undefined}
           aria-labelledby={isProfileView ? undefined : "vote-main-title"}
         >
@@ -722,7 +729,36 @@ function VoteResultRanking({
 
               return (
                 <article key={candidate.id} className="fe-result-row">
-                  <div className="fe-result-rank">
+                  <div
+                    className={`fe-result-rank ${
+                      isFirstPlace ? "fe-result-rank-first" : ""
+                    }`}
+                  >
+                    {isFirstPlace && (
+                      <svg
+                        className="fe-result-crown"
+                        viewBox="0 0 40 34"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M7.5 27.5L4.5 10.5L14.5 17.5L20.5 5L26.5 17.5L36 10.5L33 27.5H7.5Z"
+                          fill="#FFD84D"
+                          stroke="#6B2A00"
+                          strokeWidth="2.6"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M8.5 28.5H32"
+                          stroke="#504EF2"
+                          strokeWidth="2.6"
+                          strokeLinecap="round"
+                        />
+                        <circle cx="4.5" cy="10.5" r="2.4" fill="#FFD84D" stroke="#6B2A00" strokeWidth="2" />
+                        <circle cx="20.5" cy="5" r="2.4" fill="#FFD84D" stroke="#6B2A00" strokeWidth="2" />
+                        <circle cx="36" cy="10.5" r="2.4" fill="#FFD84D" stroke="#6B2A00" strokeWidth="2" />
+                      </svg>
+                    )}
                     <span>{rank}</span>
                   </div>
 

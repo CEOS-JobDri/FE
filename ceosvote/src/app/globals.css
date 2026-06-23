@@ -403,6 +403,7 @@ button.vote-entry-card:focus-visible {
 }
 
 .fe-profile-button {
+  box-sizing: border-box;
   width: 125px;
   padding: 10px 16px;
 }
@@ -596,9 +597,11 @@ button.vote-entry-card:focus-visible {
   width: 330px;
   align-items: flex-start;
   gap: 12px;
+  overflow: visible;
 }
 
 .fe-result-rank {
+  position: relative;
   display: flex;
   box-sizing: border-box;
   width: 66px;
@@ -613,6 +616,17 @@ button.vote-entry-card:focus-visible {
   align-self: stretch;
   border-radius: var(--radius-20);
   background: var(--color-gray-8);
+}
+
+.fe-result-crown {
+  position: absolute;
+  top: -17px;
+  left: -14px;
+  width: 38px;
+  height: 32px;
+  pointer-events: none;
+  transform: rotate(-18deg);
+  transform-origin: center;
 }
 
 .fe-result-rank span {
@@ -846,11 +860,12 @@ button.vote-entry-card:focus-visible {
   }
 
   .vote-main.vote-main-fe {
-    gap: 20px;
+    gap: 34px;
   }
 
   .vote-main-entry,
-  .vote-main-part-select {
+  .vote-main-part-select,
+  .vote-main-choice {
     margin-top: 28px;
   }
 
@@ -894,56 +909,69 @@ button.vote-entry-card:focus-visible {
   .fe-part-vote-panel {
     width: 100%;
     align-items: center;
-    gap: 20px;
+    gap: 34px;
   }
 
   .fe-candidate-grid {
-    width: min(100%, 318px);
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    --mobile-candidate-card-size: min(158px, calc((100vw - 52px) / 2));
+
+    width: min(100%, calc((var(--mobile-candidate-card-size) * 2) + 12px));
+    grid-template-columns: repeat(2, var(--mobile-candidate-card-size));
     justify-content: center;
-    gap: 10px 8px;
+    gap: 12px;
   }
 
   .fe-candidate-card {
     box-sizing: border-box;
-    width: 100%;
-    max-width: 155px;
-    height: auto;
-    padding: 0;
-    gap: 32px;
+    width: var(--mobile-candidate-card-size);
+    height: var(--mobile-candidate-card-size);
+    max-width: none;
+    aspect-ratio: auto;
+    min-height: 0;
+    justify-self: center;
+    padding: 16px 10px 14px;
+    gap: 0;
   }
 
   .fe-candidate-card-content {
-    gap: 20px;
+    gap: 16px;
+  }
+
+  .fe-candidate-copy {
+    gap: 2px;
   }
 
   .fe-candidate-team {
-    font-size: 15px;
-    letter-spacing: -0.3px;
+    font-size: 12px;
+    letter-spacing: -0.24px;
   }
 
   .fe-candidate-name {
-    font-size: 24px;
-    letter-spacing: -0.48px;
+    font-size: 20px;
+    letter-spacing: -0.4px;
   }
 
   .fe-profile-button {
-    width: 100%;
-    padding: 12px 16px;
+    width: 116px;
+    align-self: center;
+    padding: 8px 12px;
   }
 
   .fe-profile-button span {
-    font-size: 16px;
+    font-size: 14px;
     line-height: 140%;
-    letter-spacing: -0.32px;
+    letter-spacing: -0.28px;
   }
 
   .fe-vote-actions {
-    width: 100%;
-    max-width: 308px;
+    width: min(100%, 328px);
+    max-width: 328px;
     flex-direction: row;
     align-items: center;
+    justify-content: center;
+    align-self: center;
     gap: 8px;
+    margin-inline: auto;
   }
 
   .fe-vote-actions .fe-action-button {
@@ -955,40 +983,156 @@ button.vote-entry-card:focus-visible {
     letter-spacing: -0.36px;
   }
 
-  .demo-vote-panel,
-  .demo-team-list,
-  .demo-team-row {
+  .demo-vote-panel {
     width: 100%;
+    gap: 52px;
+  }
+
+  .demo-team-list {
+    width: min(100%, 364px);
+    gap: 18px;
   }
 
   .demo-team-row {
-    flex-direction: column;
-    gap: 20px;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
   }
 
   .demo-team-card {
-    width: 100%;
+    width: 116px;
+    height: 134px;
+    flex: 0 0 116px;
+    border-radius: 16px;
   }
 
   .demo-team-card-content {
+    box-sizing: border-box;
     width: 100%;
+    padding: 0 10px;
+    gap: 0;
+  }
+
+  .demo-team-copy {
+    gap: 8px;
+  }
+
+  .demo-team-name {
+    font-size: 20px;
+    letter-spacing: -0.4px;
+  }
+
+  .demo-team-description {
+    font-size: 12px;
+    letter-spacing: -0.24px;
+  }
+
+  .demo-vote-panel .fe-vote-actions {
+    width: min(100%, 310px);
+    max-width: 310px;
   }
 
   .fe-result-panel,
   .fe-result-ranking,
-  .fe-result-column,
-  .fe-result-row {
+  .fe-result-column {
     width: 100%;
+  }
+
+  .fe-result-panel {
+    gap: 34px;
   }
 
   .fe-result-ranking {
     flex-direction: column;
-    gap: 20px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .fe-result-column {
+    align-items: center;
+    gap: 10px;
+  }
+
+  .fe-result-row {
+    width: min(100%, 270px);
+    gap: 10px;
   }
 
   .fe-result-rank {
-    width: 66px;
-    min-width: 66px;
+    width: 52px;
+    min-width: 52px;
+    height: 52px;
+    border-radius: 16px;
+  }
+
+  .fe-result-rank span {
+    font-size: 22px;
+    letter-spacing: -0.44px;
+  }
+
+  .fe-result-crown {
+    top: -14px;
+    left: -12px;
+    width: 31px;
+    height: 27px;
+  }
+
+  .fe-result-card {
+    height: 52px;
+    padding: 0 16px;
+    border-radius: 16px;
+  }
+
+  .fe-result-card-content {
+    gap: 12px;
+  }
+
+  .fe-result-name,
+  .fe-result-count {
+    font-size: 20px;
+    letter-spacing: -0.4px;
+  }
+
+  .demo-result-panel {
+    gap: 34px;
+  }
+
+  .demo-result-panel .fe-result-ranking {
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .demo-result-panel .fe-result-column {
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .demo-result-panel .fe-result-row {
+    width: min(100%, 270px);
+    gap: 10px;
+  }
+
+  .demo-result-panel .fe-result-rank {
+    width: 52px;
+    min-width: 52px;
+    height: 52px;
+    border-radius: 16px;
+  }
+
+  .demo-result-panel .fe-result-card {
+    height: 52px;
+    padding: 0 16px;
+    border-radius: 16px;
+  }
+
+  .demo-result-panel .fe-result-rank span {
+    font-size: 22px;
+    letter-spacing: -0.44px;
   }
 
   .main-menu {
@@ -1127,6 +1271,7 @@ button.vote-entry-card:focus-visible {
 
   .fe-profile-button {
     width: 100%;
+    align-self: stretch;
     padding: 12px 16px;
   }
 
@@ -1154,6 +1299,42 @@ button.vote-entry-card:focus-visible {
 
   .about-card {
     width: min(496px, 70%);
+  }
+}
+
+@media (max-width: 863px) {
+  .vote-main-choice .demo-vote-panel {
+    width: 100%;
+    gap: 52px;
+  }
+
+  .vote-main-choice .demo-team-list {
+    width: min(100%, 364px);
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .vote-main-choice .demo-team-row {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .vote-main-choice .demo-team-card {
+    width: 116px;
+    height: 134px;
+    flex: 0 0 116px;
+    border-radius: 16px;
+  }
+
+  .vote-main-choice .demo-team-card-content {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0 10px;
+    gap: 0;
   }
 }
 
