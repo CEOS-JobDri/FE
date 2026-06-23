@@ -620,12 +620,12 @@ button.vote-entry-card:focus-visible {
 
 .fe-result-crown {
   position: absolute;
-  top: -17px;
-  left: -14px;
+  top: -12px;
+  left: -4px;
   width: 38px;
   height: 32px;
   pointer-events: none;
-  transform: rotate(-18deg);
+  transform: rotate(-35deg);
   transform-origin: center;
 }
 
@@ -1073,8 +1073,8 @@ button.vote-entry-card:focus-visible {
   }
 
   .fe-result-crown {
-    top: -14px;
-    left: -12px;
+    top: -10px;
+    left: -4px;
     width: 31px;
     height: 27px;
   }

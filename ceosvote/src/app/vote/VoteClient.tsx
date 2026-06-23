@@ -748,12 +748,6 @@ function VoteResultRanking({
                           strokeWidth="2.6"
                           strokeLinejoin="round"
                         />
-                        <path
-                          d="M8.5 28.5H32"
-                          stroke="#504EF2"
-                          strokeWidth="2.6"
-                          strokeLinecap="round"
-                        />
                         <circle cx="4.5" cy="10.5" r="2.4" fill="#FFD84D" stroke="#6B2A00" strokeWidth="2" />
                         <circle cx="20.5" cy="5" r="2.4" fill="#FFD84D" stroke="#6B2A00" strokeWidth="2" />
                         <circle cx="36" cy="10.5" r="2.4" fill="#FFD84D" stroke="#6B2A00" strokeWidth="2" />
