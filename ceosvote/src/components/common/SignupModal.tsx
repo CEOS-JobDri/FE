@@ -10,7 +10,6 @@ import {
   // verifyEmailCode,
   signup,
 } from "@/services/auth";
-import { saveToken } from "@/utils/auth";
 
 type Step = "email" | "verify" | "name" | "password";
 type Part = "프론트엔드" | "백엔드";

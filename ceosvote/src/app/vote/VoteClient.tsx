@@ -6,6 +6,16 @@ import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import Button from "@/components/common/Button";
 import IconOnlyButton from "@/components/common/IconOnlyButton";
+import {
+  getAdminPartCandidates,
+  getPartVoteResults,
+  getTeamVoteResults,
+  submitPartVote,
+  submitTeamVote,
+  type PartVoteResultResponse,
+  type TeamVoteResultResponse,
+  type VotePartApiValue,
+} from "@/services/vote";
 
 type PartLeaderPart = "fe" | "be";
 
@@ -29,6 +39,7 @@ type RankedVoteItem = {
 type DemoDayTeam = {
   id: string;
   name: string;
+  apiTeam: string;
   description: string;
 };
 
@@ -64,6 +75,11 @@ const partLeaderLabels: Record<PartLeaderPart, string> = {
 const partLeaderProfilePartNames: Record<PartLeaderPart, string> = {
   fe: "프론트엔드",
   be: "백엔드",
+};
+
+const partLeaderApiValues: Record<PartLeaderPart, VotePartApiValue> = {
+  fe: "FRONTEND",
+  be: "BACKEND",
 };
 
 const fePartLeaderCandidates: PartLeaderCandidate[] = [
@@ -204,33 +220,38 @@ const demoDayTeams: DemoDayTeam[] = [
   {
     id: "conx",
     name: "CONX",
+    apiTeam: "CONX",
     description: "어쩌구저쩌구\n서비스",
   },
   {
     id: "ditda",
     name: "Ditda",
+    apiTeam: "DITDA",
     description: "어쩌구저쩌구\n서비스",
   },
   {
     id: "groupeat",
     name: "Groupeat",
+    apiTeam: "GROUPEAT",
     description: "어쩌구저쩌구\n서비스",
   },
   {
     id: "ipx",
     name: "IPX",
+    apiTeam: "IPX",
     description: "어쩌구저쩌구\n서비스",
   },
   {
     id: "jobdri",
     name: "Jobdri",
+    apiTeam: "JOBDRI",
     description: "어쩌구저쩌구\n서비스",
   },
 ];
 
 const createInitialPartLeaderResults = (candidates: PartLeaderCandidate[]) =>
   candidates.reduce<Record<string, number>>((results, candidate) => {
-  results[candidate.id] = 3;
+  results[candidate.id] = 0;
   return results;
 }, {});
 
@@ -242,11 +263,71 @@ const initialPartLeaderResults: Record<PartLeaderPart, Record<string, number>> =
 
 const initialDemoDayResults = demoDayTeams.reduce<Record<string, number>>(
   (results, team) => {
-    results[team.id] = 3;
+    results[team.id] = 0;
     return results;
   },
   {},
 );
+
+const initialPartLeaderCandidateApiIds: Record<
+  PartLeaderPart,
+  Record<string, number>
+> = {
+  fe: {},
+  be: {},
+};
+
+function normalizeVoteKey(value: string) {
+  return value.replace(/\s+/g, "").toLowerCase();
+}
+
+function mapPartLeaderApiResults(
+  part: PartLeaderPart,
+  apiResults: PartVoteResultResponse[],
+) {
+  const apiResultByName = new Map(
+    apiResults.map((result) => [normalizeVoteKey(result.name), result]),
+  );
+
+  return partLeaderCandidates[part].reduce(
+    (mappedResults, candidate) => {
+      const apiResult = apiResultByName.get(normalizeVoteKey(candidate.name));
+
+      mappedResults.results[candidate.id] = apiResult?.voteCount ?? 0;
+
+      if (apiResult) {
+        mappedResults.candidateApiIds[candidate.id] = apiResult.candidateId;
+      }
+
+      return mappedResults;
+    },
+    {
+      results: {} as Record<string, number>,
+      candidateApiIds: {} as Record<string, number>,
+    },
+  );
+}
+
+function mapTeamApiResults(apiResults: TeamVoteResultResponse[]) {
+  const apiResultByTeam = new Map(
+    apiResults.map((result) => [normalizeVoteKey(result.team), result]),
+  );
+
+  return demoDayTeams.reduce<Record<string, number>>((results, team) => {
+    const apiResult =
+      apiResultByTeam.get(normalizeVoteKey(team.apiTeam)) ??
+      apiResultByTeam.get(normalizeVoteKey(team.name));
+
+    results[team.id] = apiResult?.voteCount ?? 0;
+    return results;
+  }, {});
+}
+
+function getVoteErrorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "투표 처리 중 오류가 발생했습니다.";
+}
 
 type VoteView =
   | "entry"
@@ -294,6 +375,9 @@ export default function VoteClient() {
   const [partLeaderResults, setPartLeaderResults] = useState(
     initialPartLeaderResults,
   );
+  const [partLeaderCandidateApiIds, setPartLeaderCandidateApiIds] = useState(
+    initialPartLeaderCandidateApiIds,
+  );
   const [demoDayResults, setDemoDayResults] = useState(initialDemoDayResults);
   const activePartLabel = partLeaderLabels[activePart];
   const activeCandidates = partLeaderCandidates[activePart];
@@ -323,28 +407,167 @@ export default function VoteClient() {
     activeCandidates.find((candidate) => candidate.id === selectedProfileId) ??
     activeCandidates[0];
 
-  const openPartLeaderVote = (part: PartLeaderPart) => {
-    setActivePart(part);
-    setSelectedProfileId(null);
-    setView("partLeaderVote");
+  const logVoteWarning = (message: string) => {
+    console.warn(`[vote] ${message}`);
   };
 
-  const handleSubmitVote = (candidateId: string) => {
+  const getPartLeaderApiResults = async (part: PartLeaderPart) => {
+    const apiPart = partLeaderApiValues[part];
+    const voteResults = await getPartVoteResults(apiPart);
+
+    if (voteResults.length > 0) {
+      return voteResults;
+    }
+
+    try {
+      return await getAdminPartCandidates(apiPart);
+    } catch (error) {
+      logVoteWarning(
+        `GET /api/admin/candidates fallback failed: ${getVoteErrorMessage(error)}`,
+      );
+      return voteResults;
+    }
+  };
+
+  const syncPartLeaderResults = async (part: PartLeaderPart) => {
+    const apiResults = await getPartLeaderApiResults(part);
+    const mappedResults = mapPartLeaderApiResults(part, apiResults);
+
     setPartLeaderResults((currentResults) => ({
       ...currentResults,
-      [activePart]: {
-        ...currentResults[activePart],
-        [candidateId]: (currentResults[activePart][candidateId] ?? 0) + 1,
-      },
+      [part]: mappedResults.results,
     }));
-    setView("partLeaderResult");
+    setPartLeaderCandidateApiIds((currentApiIds) => ({
+      ...currentApiIds,
+      [part]: mappedResults.candidateApiIds,
+    }));
+
+    return mappedResults;
   };
 
-  const handleSubmitDemoVote = (teamId: string) => {
+  const addLocalPartLeaderVote = (
+    part: PartLeaderPart,
+    candidateId: string,
+  ) => {
+    setPartLeaderResults((currentResults) => ({
+      ...currentResults,
+      [part]: {
+        ...currentResults[part],
+        [candidateId]: (currentResults[part][candidateId] ?? 0) + 1,
+      },
+    }));
+  };
+
+  const syncDemoDayResults = async () => {
+    const apiResults = await getTeamVoteResults();
+    const mappedResults = mapTeamApiResults(apiResults);
+
+    setDemoDayResults(mappedResults);
+    return mappedResults;
+  };
+
+  const addLocalDemoDayVote = (teamId: string) => {
     setDemoDayResults((currentResults) => ({
       ...currentResults,
       [teamId]: (currentResults[teamId] ?? 0) + 1,
     }));
+  };
+
+  const openPartLeaderVote = (part: PartLeaderPart) => {
+    setActivePart(part);
+    setSelectedProfileId(null);
+    setView("partLeaderVote");
+    void syncPartLeaderResults(part).catch((error) => {
+      logVoteWarning(
+        `파트장 후보 동기화 실패, 프론트 후보로 표시합니다: ${getVoteErrorMessage(error)}`,
+      );
+    });
+  };
+
+  const openDemoDayVote = () => {
+    setView("demoDayVote");
+    void syncDemoDayResults().catch((error) => {
+      logVoteWarning(
+        `데모데이 결과 동기화 실패, 프론트 상태로 표시합니다: ${getVoteErrorMessage(error)}`,
+      );
+    });
+  };
+
+  const handleSubmitVote = async (candidateId: string) => {
+    const part = activePart;
+    let apiCandidateId = partLeaderCandidateApiIds[part][candidateId];
+
+    if (apiCandidateId === undefined) {
+      try {
+        const mappedResults = await syncPartLeaderResults(part);
+        apiCandidateId = mappedResults.candidateApiIds[candidateId];
+      } catch (error) {
+        logVoteWarning(
+          `파트장 후보 ID 조회 실패, 프론트 상태로 투표합니다: ${getVoteErrorMessage(error)}`,
+        );
+      }
+    }
+
+    if (apiCandidateId !== undefined) {
+      try {
+        await submitPartVote(apiCandidateId);
+        await syncPartLeaderResults(part);
+        setView("partLeaderResult");
+        return;
+      } catch (error) {
+        logVoteWarning(
+          `파트장 투표 API 저장 실패, 프론트 상태로 투표합니다: ${getVoteErrorMessage(error)}`,
+        );
+      }
+    }
+
+    addLocalPartLeaderVote(part, candidateId);
+    setView("partLeaderResult");
+  };
+
+  const handleShowPartLeaderResult = async () => {
+    try {
+      await syncPartLeaderResults(activePart);
+    } catch (error) {
+      logVoteWarning(
+        `파트장 결과 동기화 실패, 프론트 상태로 표시합니다: ${getVoteErrorMessage(error)}`,
+      );
+    }
+
+    setView("partLeaderResult");
+  };
+
+  const handleSubmitDemoVote = async (teamId: string) => {
+    const selectedTeam = demoDayTeams.find((team) => team.id === teamId);
+
+    if (!selectedTeam) {
+      return;
+    }
+
+    try {
+      await submitTeamVote(selectedTeam.apiTeam);
+      await syncDemoDayResults();
+      setView("demoDayResult");
+      return;
+    } catch (error) {
+      logVoteWarning(
+        `데모데이 투표 API 저장 실패, 프론트 상태로 투표합니다: ${getVoteErrorMessage(error)}`,
+      );
+    }
+
+    addLocalDemoDayVote(teamId);
+    setView("demoDayResult");
+  };
+
+  const handleShowDemoDayResult = async () => {
+    try {
+      await syncDemoDayResults();
+    } catch (error) {
+      logVoteWarning(
+        `데모데이 결과 동기화 실패, 프론트 상태로 표시합니다: ${getVoteErrorMessage(error)}`,
+      );
+    }
+
     setView("demoDayResult");
   };
 
@@ -388,7 +611,7 @@ export default function VoteClient() {
               part={activePart}
               candidates={activeCandidates}
               onSubmitVote={handleSubmitVote}
-              onShowResult={() => setView("partLeaderResult")}
+              onShowResult={handleShowPartLeaderResult}
               onShowProfile={(candidateId) => {
                 setSelectedProfileId(candidateId);
                 setView("partLeaderProfile");
@@ -397,7 +620,7 @@ export default function VoteClient() {
           ) : view === "demoDayVote" ? (
             <DemoDayVote
               onSubmitVote={handleSubmitDemoVote}
-              onShowResult={() => setView("demoDayResult")}
+              onShowResult={handleShowDemoDayResult}
             />
           ) : view === "demoDayResult" ? (
             <VoteResultRanking
@@ -425,7 +648,7 @@ export default function VoteClient() {
                       onClick={
                         index === 0
                           ? () => setView("partLeader")
-                          : () => setView("demoDayVote")
+                          : openDemoDayVote
                       }
                     />
                   ))}
@@ -446,8 +669,8 @@ function PartLeaderVote({
 }: {
   part: PartLeaderPart;
   candidates: PartLeaderCandidate[];
-  onSubmitVote: (candidateId: string) => void;
-  onShowResult: () => void;
+  onSubmitVote: (candidateId: string) => void | Promise<void>;
+  onShowResult: () => void | Promise<void>;
   onShowProfile: (candidateId: string) => void;
 }) {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
@@ -530,8 +753,8 @@ function DemoDayVote({
   onSubmitVote,
   onShowResult,
 }: {
-  onSubmitVote: (teamId: string) => void;
-  onShowResult: () => void;
+  onSubmitVote: (teamId: string) => void | Promise<void>;
+  onShowResult: () => void | Promise<void>;
 }) {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const teamRows = [demoDayTeams.slice(0, 3), demoDayTeams.slice(3, 5)];
