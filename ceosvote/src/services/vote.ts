@@ -55,6 +55,7 @@ async function fetchVoteApi<T>(
       error?.message ??
       error?.error ??
       (text && !text.startsWith("<") ? text : null) ??
+      getVoteApiDefaultErrorMessage(path, options.method, response.status) ??
       `${response.status} 오류가 발생했습니다.`;
 
     throw new Error(
@@ -77,6 +78,26 @@ function safeParseJson<T>(text: string): T | null {
   }
 }
 
+function getVoteApiDefaultErrorMessage(
+  path: string,
+  method = "GET",
+  status: number,
+) {
+  if (status === 401 || status === 403) {
+    if (method === "POST" && path === "/api/votes/team") {
+      return "로그인이 만료되었거나 본인 팀에는 투표할 수 없습니다.";
+    }
+
+    if (method === "POST" && path === "/api/votes/part") {
+      return "로그인이 만료되었거나 본인 파트 후보에게만 투표할 수 있습니다.";
+    }
+
+    return "로그인이 만료되었거나 접근 권한이 없습니다.";
+  }
+
+  return null;
+}
+
 export async function getTeamVoteResults() {
   return fetchVoteApi<TeamVoteResultResponse[]>("/api/votes/team");
 }
@@ -91,12 +112,6 @@ export async function submitTeamVote(team: string) {
 export async function getPartVoteResults(part: VotePartApiValue) {
   return fetchVoteApi<PartVoteResultResponse[]>(
     `/api/votes/part?part=${encodeURIComponent(part)}`,
-  );
-}
-
-export async function getAdminPartCandidates(part: VotePartApiValue) {
-  return fetchVoteApi<PartVoteResultResponse[]>(
-    `/api/admin/candidates?part=${encodeURIComponent(part)}`,
   );
 }
 

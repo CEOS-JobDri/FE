@@ -7,7 +7,6 @@ import AppHeader from "@/components/AppHeader";
 import Button from "@/components/common/Button";
 import IconOnlyButton from "@/components/common/IconOnlyButton";
 import {
-  getAdminPartCandidates,
   getPartVoteResults,
   getTeamVoteResults,
   submitPartVote,
@@ -16,11 +15,14 @@ import {
   type TeamVoteResultResponse,
   type VotePartApiValue,
 } from "@/services/vote";
+import type { UserTeam } from "@/types/auth";
+import { getAuthUser, getToken } from "@/utils/auth";
 
 type PartLeaderPart = "fe" | "be";
 
 type PartLeaderCandidate = {
   id: string;
+  apiCandidateId?: number;
   team: string;
   name: string;
   imageUrl: string;
@@ -36,10 +38,18 @@ type RankedVoteItem = {
   name: string;
 };
 
+type VoteAction =
+  | "partLoad"
+  | "partSubmit"
+  | "partResult"
+  | "demoLoad"
+  | "demoSubmit"
+  | "demoResult";
+
 type DemoDayTeam = {
   id: string;
   name: string;
-  apiTeam: string;
+  apiTeam: UserTeam;
   description: string;
 };
 
@@ -285,23 +295,42 @@ function mapPartLeaderApiResults(
   part: PartLeaderPart,
   apiResults: PartVoteResultResponse[],
 ) {
-  const apiResultByName = new Map(
-    apiResults.map((result) => [normalizeVoteKey(result.name), result]),
+  const localCandidateByName = new Map(
+    partLeaderCandidates[part].map((candidate) => [
+      normalizeVoteKey(candidate.name),
+      candidate,
+    ]),
   );
 
-  return partLeaderCandidates[part].reduce(
-    (mappedResults, candidate) => {
-      const apiResult = apiResultByName.get(normalizeVoteKey(candidate.name));
+  if (apiResults.length === 0) {
+    return {
+      candidates: partLeaderCandidates[part],
+      results: createInitialPartLeaderResults(partLeaderCandidates[part]),
+      candidateApiIds: {} as Record<string, number>,
+    };
+  }
 
-      mappedResults.results[candidate.id] = apiResult?.voteCount ?? 0;
+  return apiResults.reduce(
+    (mappedResults, apiResult) => {
+      const localCandidate = localCandidateByName.get(
+        normalizeVoteKey(apiResult.name),
+      );
+      const candidate = {
+        id: localCandidate?.id ?? `api-${apiResult.candidateId}`,
+        apiCandidateId: apiResult.candidateId,
+        team: localCandidate?.team ?? partLeaderLabels[part],
+        name: apiResult.name,
+        imageUrl: localCandidate?.imageUrl ?? "/profile1.jpg",
+      };
 
-      if (apiResult) {
-        mappedResults.candidateApiIds[candidate.id] = apiResult.candidateId;
-      }
+      mappedResults.candidates.push(candidate);
+      mappedResults.results[candidate.id] = apiResult.voteCount ?? 0;
+      mappedResults.candidateApiIds[candidate.id] = apiResult.candidateId;
 
       return mappedResults;
     },
     {
+      candidates: [] as PartLeaderCandidate[],
       results: {} as Record<string, number>,
       candidateApiIds: {} as Record<string, number>,
     },
@@ -327,6 +356,14 @@ function getVoteErrorMessage(error: unknown) {
   return error instanceof Error
     ? error.message
     : "투표 처리 중 오류가 발생했습니다.";
+}
+
+function getVoteUserMessage(error: unknown, fallbackMessage: string) {
+  const message = getVoteErrorMessage(error)
+    .replace(/^(GET|POST) \/api\/votes\/(?:team|part)(?:\?[^ ]*)? 실패: \d+\s*/u, "")
+    .trim();
+
+  return message || fallbackMessage;
 }
 
 type VoteView =
@@ -372,6 +409,9 @@ export default function VoteClient() {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(
     null,
   );
+  const [partLeaderCandidateLists, setPartLeaderCandidateLists] = useState(
+    partLeaderCandidates,
+  );
   const [partLeaderResults, setPartLeaderResults] = useState(
     initialPartLeaderResults,
   );
@@ -379,8 +419,13 @@ export default function VoteClient() {
     initialPartLeaderCandidateApiIds,
   );
   const [demoDayResults, setDemoDayResults] = useState(initialDemoDayResults);
+  const [pendingAction, setPendingAction] = useState<VoteAction | null>(null);
+  const [voteError, setVoteError] = useState<string | null>(null);
+  const [currentUserTeam] = useState<UserTeam | null>(
+    () => getAuthUser()?.team ?? null,
+  );
   const activePartLabel = partLeaderLabels[activePart];
-  const activeCandidates = partLeaderCandidates[activePart];
+  const activeCandidates = partLeaderCandidateLists[activePart];
   const title =
     view === "demoDayResult"
       ? "데모데이 투표 결과"
@@ -403,6 +448,8 @@ export default function VoteClient() {
     view === "partLeaderResult" ||
     view === "demoDayVote" ||
     view === "demoDayResult";
+  const isPartBusy = pendingAction?.startsWith("part") ?? false;
+  const isDemoBusy = pendingAction?.startsWith("demo") ?? false;
   const selectedProfile =
     activeCandidates.find((candidate) => candidate.id === selectedProfileId) ??
     activeCandidates[0];
@@ -413,26 +460,17 @@ export default function VoteClient() {
 
   const getPartLeaderApiResults = async (part: PartLeaderPart) => {
     const apiPart = partLeaderApiValues[part];
-    const voteResults = await getPartVoteResults(apiPart);
-
-    if (voteResults.length > 0) {
-      return voteResults;
-    }
-
-    try {
-      return await getAdminPartCandidates(apiPart);
-    } catch (error) {
-      logVoteWarning(
-        `GET /api/admin/candidates fallback failed: ${getVoteErrorMessage(error)}`,
-      );
-      return voteResults;
-    }
+    return getPartVoteResults(apiPart);
   };
 
   const syncPartLeaderResults = async (part: PartLeaderPart) => {
     const apiResults = await getPartLeaderApiResults(part);
     const mappedResults = mapPartLeaderApiResults(part, apiResults);
 
+    setPartLeaderCandidateLists((currentCandidates) => ({
+      ...currentCandidates,
+      [part]: mappedResults.candidates,
+    }));
     setPartLeaderResults((currentResults) => ({
       ...currentResults,
       [part]: mappedResults.results,
@@ -445,19 +483,6 @@ export default function VoteClient() {
     return mappedResults;
   };
 
-  const addLocalPartLeaderVote = (
-    part: PartLeaderPart,
-    candidateId: string,
-  ) => {
-    setPartLeaderResults((currentResults) => ({
-      ...currentResults,
-      [part]: {
-        ...currentResults[part],
-        [candidateId]: (currentResults[part][candidateId] ?? 0) + 1,
-      },
-    }));
-  };
-
   const syncDemoDayResults = async () => {
     const apiResults = await getTeamVoteResults();
     const mappedResults = mapTeamApiResults(apiResults);
@@ -466,109 +491,172 @@ export default function VoteClient() {
     return mappedResults;
   };
 
-  const addLocalDemoDayVote = (teamId: string) => {
-    setDemoDayResults((currentResults) => ({
-      ...currentResults,
-      [teamId]: (currentResults[teamId] ?? 0) + 1,
-    }));
-  };
-
   const openPartLeaderVote = (part: PartLeaderPart) => {
     setActivePart(part);
     setSelectedProfileId(null);
+    setVoteError(null);
     setView("partLeaderVote");
+    setPendingAction("partLoad");
     void syncPartLeaderResults(part).catch((error) => {
+      setVoteError(
+        getVoteUserMessage(error, "파트장 후보 정보를 불러오지 못했습니다."),
+      );
       logVoteWarning(
-        `파트장 후보 동기화 실패, 프론트 후보로 표시합니다: ${getVoteErrorMessage(error)}`,
+        `파트장 후보 동기화 실패: ${getVoteErrorMessage(error)}`,
+      );
+    }).finally(() => {
+      setPendingAction((currentAction) =>
+        currentAction === "partLoad" ? null : currentAction,
       );
     });
   };
 
   const openDemoDayVote = () => {
+    setVoteError(null);
     setView("demoDayVote");
+    setPendingAction("demoLoad");
     void syncDemoDayResults().catch((error) => {
+      setVoteError(
+        getVoteUserMessage(error, "데모데이 결과를 불러오지 못했습니다."),
+      );
       logVoteWarning(
-        `데모데이 결과 동기화 실패, 프론트 상태로 표시합니다: ${getVoteErrorMessage(error)}`,
+        `데모데이 결과 동기화 실패: ${getVoteErrorMessage(error)}`,
+      );
+    }).finally(() => {
+      setPendingAction((currentAction) =>
+        currentAction === "demoLoad" ? null : currentAction,
       );
     });
   };
 
   const handleSubmitVote = async (candidateId: string) => {
-    const part = activePart;
-    let apiCandidateId = partLeaderCandidateApiIds[part][candidateId];
+    if (pendingAction) {
+      return;
+    }
 
-    if (apiCandidateId === undefined) {
-      try {
+    if (!getToken()) {
+      setVoteError("로그인 후 투표할 수 있습니다.");
+      return;
+    }
+
+    const part = activePart;
+    setVoteError(null);
+    setPendingAction("partSubmit");
+
+    try {
+      let apiCandidateId = partLeaderCandidateApiIds[part][candidateId];
+
+      if (apiCandidateId === undefined) {
         const mappedResults = await syncPartLeaderResults(part);
         apiCandidateId = mappedResults.candidateApiIds[candidateId];
-      } catch (error) {
-        logVoteWarning(
-          `파트장 후보 ID 조회 실패, 프론트 상태로 투표합니다: ${getVoteErrorMessage(error)}`,
+      }
+
+      if (apiCandidateId === undefined) {
+        throw new Error(
+          "아직 서버에 등록된 후보가 아닙니다. 관리자 후보 등록 후 다시 시도해 주세요.",
         );
       }
-    }
 
-    if (apiCandidateId !== undefined) {
-      try {
-        await submitPartVote(apiCandidateId);
-        await syncPartLeaderResults(part);
-        setView("partLeaderResult");
-        return;
-      } catch (error) {
-        logVoteWarning(
-          `파트장 투표 API 저장 실패, 프론트 상태로 투표합니다: ${getVoteErrorMessage(error)}`,
-        );
-      }
+      await submitPartVote(apiCandidateId);
+      await syncPartLeaderResults(part);
+      setView("partLeaderResult");
+    } catch (error) {
+      setVoteError(
+        getVoteUserMessage(error, "파트장 투표에 실패했습니다."),
+      );
+      logVoteWarning(`파트장 투표 실패: ${getVoteErrorMessage(error)}`);
+    } finally {
+      setPendingAction((currentAction) =>
+        currentAction === "partSubmit" ? null : currentAction,
+      );
     }
-
-    addLocalPartLeaderVote(part, candidateId);
-    setView("partLeaderResult");
   };
 
   const handleShowPartLeaderResult = async () => {
-    try {
-      await syncPartLeaderResults(activePart);
-    } catch (error) {
-      logVoteWarning(
-        `파트장 결과 동기화 실패, 프론트 상태로 표시합니다: ${getVoteErrorMessage(error)}`,
-      );
+    if (pendingAction) {
+      return;
     }
 
-    setView("partLeaderResult");
+    setVoteError(null);
+    setPendingAction("partResult");
+
+    try {
+      await syncPartLeaderResults(activePart);
+      setView("partLeaderResult");
+    } catch (error) {
+      setVoteError(
+        getVoteUserMessage(error, "파트장 투표 결과를 불러오지 못했습니다."),
+      );
+      logVoteWarning(
+        `파트장 결과 동기화 실패: ${getVoteErrorMessage(error)}`,
+      );
+    } finally {
+      setPendingAction((currentAction) =>
+        currentAction === "partResult" ? null : currentAction,
+      );
+    }
   };
 
   const handleSubmitDemoVote = async (teamId: string) => {
+    if (pendingAction) {
+      return;
+    }
+
+    if (!getToken()) {
+      setVoteError("로그인 후 투표할 수 있습니다.");
+      return;
+    }
+
     const selectedTeam = demoDayTeams.find((team) => team.id === teamId);
 
     if (!selectedTeam) {
       return;
     }
 
+    setVoteError(null);
+    setPendingAction("demoSubmit");
+
     try {
       await submitTeamVote(selectedTeam.apiTeam);
       await syncDemoDayResults();
       setView("demoDayResult");
-      return;
     } catch (error) {
+      setVoteError(
+        getVoteUserMessage(error, "데모데이 투표에 실패했습니다."),
+      );
       logVoteWarning(
-        `데모데이 투표 API 저장 실패, 프론트 상태로 투표합니다: ${getVoteErrorMessage(error)}`,
+        `데모데이 투표 실패: ${getVoteErrorMessage(error)}`,
+      );
+    } finally {
+      setPendingAction((currentAction) =>
+        currentAction === "demoSubmit" ? null : currentAction,
       );
     }
-
-    addLocalDemoDayVote(teamId);
-    setView("demoDayResult");
   };
 
   const handleShowDemoDayResult = async () => {
-    try {
-      await syncDemoDayResults();
-    } catch (error) {
-      logVoteWarning(
-        `데모데이 결과 동기화 실패, 프론트 상태로 표시합니다: ${getVoteErrorMessage(error)}`,
-      );
+    if (pendingAction) {
+      return;
     }
 
-    setView("demoDayResult");
+    setVoteError(null);
+    setPendingAction("demoResult");
+
+    try {
+      await syncDemoDayResults();
+      setView("demoDayResult");
+    } catch (error) {
+      setVoteError(
+        getVoteUserMessage(error, "데모데이 투표 결과를 불러오지 못했습니다."),
+      );
+      logVoteWarning(
+        `데모데이 결과 동기화 실패: ${getVoteErrorMessage(error)}`,
+      );
+    } finally {
+      setPendingAction((currentAction) =>
+        currentAction === "demoResult" ? null : currentAction,
+      );
+    }
   };
 
   return (
@@ -591,6 +679,12 @@ export default function VoteClient() {
             <h1 id="vote-main-title" className="vote-main-title">
               {title}
             </h1>
+          )}
+
+          {voteError && !isProfileView && (
+            <p className="vote-status-message" role="alert">
+              {voteError}
+            </p>
           )}
 
           {isProfileView ? (
@@ -616,11 +710,14 @@ export default function VoteClient() {
                 setSelectedProfileId(candidateId);
                 setView("partLeaderProfile");
               }}
+              isBusy={isPartBusy}
             />
           ) : view === "demoDayVote" ? (
             <DemoDayVote
               onSubmitVote={handleSubmitDemoVote}
               onShowResult={handleShowDemoDayResult}
+              isBusy={isDemoBusy}
+              currentUserTeam={currentUserTeam}
             />
           ) : view === "demoDayResult" ? (
             <VoteResultRanking
@@ -666,12 +763,14 @@ function PartLeaderVote({
   onSubmitVote,
   onShowResult,
   onShowProfile,
+  isBusy,
 }: {
   part: PartLeaderPart;
   candidates: PartLeaderCandidate[];
   onSubmitVote: (candidateId: string) => void | Promise<void>;
   onShowResult: () => void | Promise<void>;
   onShowProfile: (candidateId: string) => void;
+  isBusy: boolean;
 }) {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
     null,
@@ -730,6 +829,7 @@ function PartLeaderVote({
           label="투표하기"
           size="large"
           className="fe-action-button fe-action-button-primary"
+          disabled={!selectedCandidateId || isBusy}
           onClick={() => {
             if (!selectedCandidateId) {
               return;
@@ -742,6 +842,7 @@ function PartLeaderVote({
           label="결과보기"
           size="large"
           className="fe-action-button fe-action-button-result"
+          disabled={isBusy}
           onClick={onShowResult}
         />
       </div>
@@ -752,12 +853,21 @@ function PartLeaderVote({
 function DemoDayVote({
   onSubmitVote,
   onShowResult,
+  isBusy,
+  currentUserTeam,
 }: {
   onSubmitVote: (teamId: string) => void | Promise<void>;
   onShowResult: () => void | Promise<void>;
+  isBusy: boolean;
+  currentUserTeam: UserTeam | null;
 }) {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const teamRows = [demoDayTeams.slice(0, 3), demoDayTeams.slice(3, 5)];
+  const selectedTeam = selectedTeamId
+    ? demoDayTeams.find((team) => team.id === selectedTeamId)
+    : null;
+  const isSelectedOwnTeam = selectedTeam?.apiTeam === currentUserTeam;
+  const effectiveSelectedTeamId = isSelectedOwnTeam ? null : selectedTeamId;
 
   return (
     <section className="demo-vote-panel" aria-label="데모데이 후보 팀">
@@ -765,19 +875,31 @@ function DemoDayVote({
         {teamRows.map((row, rowIndex) => (
           <div key={rowIndex} className="demo-team-row">
             {row.map((team) => {
-              const isSelected = selectedTeamId === team.id;
+              const isSelected = effectiveSelectedTeamId === team.id;
+              const isOwnTeam = team.apiTeam === currentUserTeam;
 
               return (
                 <article
                   key={team.id}
                   className={`demo-team-card ${
                     isSelected ? "demo-team-card-selected" : ""
-                  }`}
-                  role="button"
-                  tabIndex={0}
-                  aria-pressed={isSelected}
-                  onClick={() => setSelectedTeamId(team.id)}
+                  } ${isOwnTeam ? "demo-team-card-disabled" : ""}`}
+                  role={isOwnTeam ? undefined : "button"}
+                  tabIndex={isOwnTeam ? -1 : 0}
+                  aria-disabled={isOwnTeam || undefined}
+                  aria-pressed={isOwnTeam ? undefined : isSelected}
+                  onClick={() => {
+                    if (isOwnTeam) {
+                      return;
+                    }
+
+                    setSelectedTeamId(team.id);
+                  }}
                   onKeyDown={(event) => {
+                    if (isOwnTeam) {
+                      return;
+                    }
+
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
                       setSelectedTeamId(team.id);
@@ -804,8 +926,9 @@ function DemoDayVote({
           label="투표하기"
           size="large"
           className="fe-action-button fe-action-button-primary"
+          disabled={!selectedTeamId || isSelectedOwnTeam || isBusy}
           onClick={() => {
-            if (!selectedTeamId) {
+            if (!selectedTeamId || isSelectedOwnTeam) {
               return;
             }
 
@@ -816,6 +939,7 @@ function DemoDayVote({
           label="결과보기"
           size="large"
           className="fe-action-button fe-action-button-result"
+          disabled={isBusy}
           onClick={onShowResult}
         />
       </div>

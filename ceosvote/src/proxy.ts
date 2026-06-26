@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/landing"];
+const PUBLIC_PATHS = ["/login", "/signup", "/landing"];
 
 export function proxy(request: NextRequest) {
   const token = request.cookies.get("accessToken")?.value;
   const { pathname } = request.nextUrl;
 
-  const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+  const isPublic =
+    pathname === "/" ||
+    PUBLIC_PATHS.some(
+      (path) => pathname === path || pathname.startsWith(`${path}/`),
+    );
 
   if (!token && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -20,6 +24,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // matcher: ["/((?!_next/static|_next/image|favicon\\.ico).*)"],
-  matcher: [],
+  matcher: ["/((?!api|_next/static|_next/image|favicon\\.ico|.*\\..*).*)"],
 };
