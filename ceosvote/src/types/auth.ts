@@ -8,12 +8,26 @@ export interface SignupRequest {
   password: string;
   email: string;
   name: string;
-  part: "FRONTEND" | "BACKEND";
-  team: "JOBDRI" | "IPX" | "GROUPEAT" | "CONX" | "DITDA";
+  part: UserPart;
+  team: UserTeam;
+}
+
+export type UserPart = "FRONTEND" | "BACKEND";
+export type UserTeam = "JOBDRI" | "IPX" | "GROUPEAT" | "CONX" | "DITDA";
+
+export interface UserSummary {
+  id: number;
+  loginId: string;
+  name: string;
+  part: UserPart;
+  team: UserTeam;
 }
 
 export interface AuthResponse {
   accessToken: string;
+  tokenType?: string;
+  expiresIn?: number;
+  user?: UserSummary;
 }
 
 // export interface EmailVerificationSendRequest {

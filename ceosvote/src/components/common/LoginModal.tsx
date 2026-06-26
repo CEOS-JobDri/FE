@@ -6,7 +6,7 @@ import clsx from "clsx";
 import Icon from "@/components/common/icons/Icon";
 import Button from "@/components/common/Button";
 import { login } from "@/services/auth";
-import { saveToken } from "@/utils/auth";
+import { saveAuthUser, saveToken } from "@/utils/auth";
 
 export default function LoginModal() {
   const router = useRouter();
@@ -24,8 +24,13 @@ export default function LoginModal() {
     setError("");
     setLoading(true);
     try {
-      const { accessToken } = await login({ loginId, password });
-      saveToken(accessToken);
+      const response = await login({ loginId, password });
+      saveToken(response.accessToken);
+
+      if (response.user) {
+        saveAuthUser(response.user);
+      }
+
       router.push("/main");
     } catch (e) {
       setError(e instanceof Error ? e.message : "로그인에 실패했습니다.");
