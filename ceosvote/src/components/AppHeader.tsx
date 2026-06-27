@@ -33,6 +33,16 @@ export default function AppHeader() {
           <Link href="/vote">
             <TextOnlyButton label="투표하기" size="small" styleType="primary" />
           </Link>
+
+          <TextOnlyButton
+            label="ADMIN"
+            size="small"
+            styleType="secondary"
+            className="text-text-neutral-default hover:text-text-neutral-default"
+            onClick={() => router.push("/admin")}
+          />
+
+
           {isLoggedIn ? (
             <TextOnlyButton
               label="로그아웃"
@@ -51,6 +61,7 @@ export default function AppHeader() {
               />
             </Link>
           )}
+
         </nav>
       </header>
 

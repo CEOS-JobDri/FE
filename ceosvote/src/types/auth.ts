@@ -25,6 +25,7 @@ export interface UserSummary {
 
 export interface AuthResponse {
   accessToken: string;
+  candidateId: number | null;
   tokenType?: string;
   expiresIn?: number;
   user?: UserSummary;
@@ -42,3 +43,14 @@ export interface AuthResponse {
 // export interface EmailVerificationVerifyResponse {
 //   emailVerificationToken: string;
 // }
+
+export interface Candidate {
+  candidateId: number;
+  name: string;
+  voteCount: number;
+}
+
+export interface CreateCandidateReq {
+  name: string;
+  part: "FRONTEND" | "BACKEND";
+}

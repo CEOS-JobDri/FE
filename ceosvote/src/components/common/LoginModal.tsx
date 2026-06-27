@@ -18,17 +18,26 @@ export default function LoginModal() {
   const [loading, setLoading] = useState(false);
 
   const isActive = loginId.length > 0 && password.length > 0;
-
+  
   const handleLogin = async () => {
     if (!isActive || loading) return;
     setError("");
     setLoading(true);
     try {
+      // 변수명은 develop 브랜치에 맞춰 response로 통일합니다.
       const response = await login({ loginId, password });
+      
+      // 1. 공통 로직: 토큰 저장
       saveToken(response.accessToken);
 
+      // 2. develop 브랜치 로직: 유저 정보가 있으면 저장
       if (response.user) {
         saveAuthUser(response.user);
+      }
+
+      // 3. feature 브랜치 로직: candidateId가 있으면 로컬스토리지에 저장
+      if (response.candidateId !== undefined && response.candidateId !== null) {
+        localStorage.setItem("candidateId", String(response.candidateId));
       }
 
       router.push("/main");
