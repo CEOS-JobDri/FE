@@ -6,7 +6,7 @@ import clsx from "clsx";
 import Icon from "@/components/common/icons/Icon";
 import Button from "@/components/common/Button";
 import { login } from "@/services/auth";
-import { saveToken } from "@/utils/auth";
+import { saveAuthUser, saveToken } from "@/utils/auth";
 
 export default function LoginModal() {
   const router = useRouter();
@@ -18,14 +18,28 @@ export default function LoginModal() {
   const [loading, setLoading] = useState(false);
 
   const isActive = loginId.length > 0 && password.length > 0;
+  
   const handleLogin = async () => {
     if (!isActive || loading) return;
     setError("");
     setLoading(true);
     try {
-      const responseData = await login({ loginId, password });
-      saveToken(responseData.accessToken);
-      localStorage.setItem("candidateId", String(responseData.candidateId));
+      // 변수명은 develop 브랜치에 맞춰 response로 통일합니다.
+      const response = await login({ loginId, password });
+      
+      // 1. 공통 로직: 토큰 저장
+      saveToken(response.accessToken);
+
+      // 2. develop 브랜치 로직: 유저 정보가 있으면 저장
+      if (response.user) {
+        saveAuthUser(response.user);
+      }
+
+      // 3. feature 브랜치 로직: candidateId가 있으면 로컬스토리지에 저장
+      if (response.candidateId !== undefined && response.candidateId !== null) {
+        localStorage.setItem("candidateId", String(response.candidateId));
+      }
+
       router.push("/main");
     } catch (e) {
       setError(e instanceof Error ? e.message : "로그인에 실패했습니다.");
@@ -33,6 +47,7 @@ export default function LoginModal() {
       setLoading(false);
     }
   };
+
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background-page">
       <div className="flex flex-col items-center gap-8 bg-fill-quaternary-default rounded-20 px-10 py-10 w-70 sm:w-100 shadow-modal">
