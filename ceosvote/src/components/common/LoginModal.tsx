@@ -18,7 +18,6 @@ export default function LoginModal() {
   const [loading, setLoading] = useState(false);
 
   const isActive = loginId.length > 0 && password.length > 0;
-
   const handleLogin = async () => {
     if (!isActive || loading) return;
     setError("");
