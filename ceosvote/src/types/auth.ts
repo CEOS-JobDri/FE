@@ -21,6 +21,7 @@ export interface UserSummary {
   name: string;
   part: UserPart;
   team: UserTeam;
+  role?: string;
 }
 
 export interface AuthResponse {

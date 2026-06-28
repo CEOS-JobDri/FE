@@ -28,12 +28,10 @@ async function fetchApi<T>(path: string, body: unknown): Promise<T> {
   return JSON.parse(text);
 }
 
-// 🔐 로그인은 토큰(AuthResponse)을 받아옵니다.
 export async function login(data: LoginRequest): Promise<AuthResponse> {
   return fetchApi<AuthResponse>("/api/auth/login", data);
 }
 
-// 📝 회원가입은 <T>를 지우고, 받을 데이터가 없다는 뜻인 <void>로 쾅 박아둡니다!
 export async function signup(data: SignupRequest): Promise<void> {
   await fetchApi<void>("/api/auth/signup", data);
 }
@@ -43,14 +41,11 @@ async function fetchAdminApi<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  // 1️⃣ 브라우저(클라이언트) 환경인지 확인하고 로컬 스토리지에서 토큰 꺼내기
   let token = "";
   if (typeof window !== "undefined") {
-    // ⚠️ 로그인 시 저장했던 키 이름('accessToken' 등)과 똑같이 맞춰주세요!
     token = localStorage.getItem("accessToken") || "";
   }
 
-  // 2️⃣ 헤더에 토큰 달아주기
   const headers = {
     "Content-Type": "application/json",
     // 토큰이 존재하면 Authorization 헤더에 Bearer 방식으로 추가합니다.
