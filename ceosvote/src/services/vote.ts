@@ -13,6 +13,8 @@ export interface PartVoteResultResponse {
   voteCount: number;
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 async function fetchVoteApi<T>(
   path: string,
   options: RequestInit = {},
@@ -96,6 +98,8 @@ function getVoteApiDefaultErrorMessage(
   return null;
 }
 
+// ✅ API_BASE_URL을 제거하고 깔끔하게 상대경로로만 통신하도록 수정
+
 export async function getTeamVoteResults() {
   return fetchVoteApi<TeamVoteResultResponse[]>("/api/votes/team");
 }
@@ -116,6 +120,9 @@ export async function getPartVoteResults(part: VotePartApiValue) {
 export async function submitPartVote(candidateId: number) {
   return fetchVoteApi<string>("/api/votes/part", {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({ candidateId }),
   });
 }

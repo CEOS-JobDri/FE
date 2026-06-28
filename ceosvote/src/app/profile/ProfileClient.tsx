@@ -1,13 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import IconOnlyButton from "@/components/common/IconOnlyButton";
-import type { CandidateProfile } from "@/types/profile";
-
+import type { PartLeaderCandidate } from "@/types/profile";
 interface ProfileClientProps {
-  profile: CandidateProfile;
+  profile: PartLeaderCandidate;
 }
 
 export default function ProfileClient({ profile }: ProfileClientProps) {
@@ -19,51 +17,17 @@ export default function ProfileClient({ profile }: ProfileClientProps) {
         <AppHeader />
 
         <section className="profile-card card-surface rounded-20">
-            <div className="profile-close-slot">
-              <IconOnlyButton onClick={() => router.push("/vote")} />
+          <div className="profile-close-slot">
+            <IconOnlyButton onClick={() => router.push("/vote")} />
+          </div>
+
+          <div className="profile-top">
+            <div className="profile-media-info">
+              {/* 이미지 프레임 및 Image 컴포넌트 삭제 완료 */}
+
+              <div className="profile-info">{/* 이름 h2 헤더 삭제 완료 */}</div>
             </div>
-
-            <div className="profile-top">
-              <div className="profile-media-info">
-                <div className="profile-image-frame">
-                  <Image
-                    src={profile.imageUrl}
-                    alt={`${profile.name} 프로필`}
-                    width={636}
-                    height={482}
-                    quality={100}
-                    className={`h-full w-full object-cover ${
-                      profile.imageClassName ?? ""
-                    }`}
-                    priority
-                  />
-                </div>
-
-                <div className="profile-info">
-                  <div className="flex items-center gap-1">
-                    <h2 className="text-h24-bold text-gray-9 [font-feature-settings:'liga'_off,'clig'_off] max-[863px]:text-h28-bold">
-                      {profile.name}
-                    </h2>
-                  </div>
-
-                  <div className="flex flex-col items-start gap-[5px]">
-                    <ProfileField label="종족:" value={profile.species} />
-                    <ProfileField label="성별:" value={profile.gender} />
-                    <ProfileField label="사는 곳:" value={profile.home} />
-                    <ProfileField label="친한 친구:" value={profile.friends} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="profile-detail">
-              <h3 className="text-t20-semibold mobile-text-b16-semibold text-center text-gray-9 [font-feature-settings:'liga'_off,'clig'_off]">
-                상세 정보:
-              </h3>
-              <p className="self-stretch text-t20-reg-loose mobile-text-b16-med text-gray-9 [font-feature-settings:'liga'_off,'clig'_off]">
-                {profile.description}
-              </p>
-            </div>
+          </div>
         </section>
       </div>
     </div>
