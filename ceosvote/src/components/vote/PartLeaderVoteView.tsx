@@ -3,16 +3,17 @@
 import { useState } from "react";
 import Button from "@/components/common/Button";
 import { PartLeaderCandidate, PartLeaderPart } from "@/types/profile";
+import PartLeaderResultView from "./ResultView";
 
 interface Props {
-  // 파트별 후보 목록을 Record 객체로 받아옵니다.
   candidates: Record<PartLeaderPart, PartLeaderCandidate[]>;
   results: Record<PartLeaderPart, Record<number, number>>;
   isBusy: boolean;
   onVote: (part: PartLeaderPart, id: number) => void;
-  onShowResult: () => void;
+  onShowResult: (part: PartLeaderPart) => void;
   onShowProfile: (id: number) => void;
   onBack: () => void;
+  onPartChange: (part: PartLeaderPart) => void;
 }
 
 export default function PartLeaderVoteView({
@@ -23,18 +24,41 @@ export default function PartLeaderVoteView({
   onShowResult,
   onShowProfile,
   onBack,
+  onPartChange,
 }: Props) {
-  // 현재 선택된 파트와 후보 ID를 상태로 관리합니다.
   const [currentPart, setCurrentPart] = useState<PartLeaderPart>("FRONTEND");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [isResultView, setIsResultView] = useState(false);
 
   const currentCandidates = candidates[currentPart];
 
-  // 파트 변경 시 선택된 ID 초기화
   const handlePartChange = (part: PartLeaderPart) => {
     setCurrentPart(part);
     setSelectedId(null);
+    onPartChange(part);
   };
+
+  const handleShowResult = async () => {
+    await onShowResult(currentPart); // ✅ 현재 선택된 파트를 넘겨줍니다.
+    setIsResultView(true);
+  };
+
+  if (isResultView) {
+    return (
+      <section className="fe-part-result-panel">
+        <h2 className="text-2xl font-bold mb-4">투표 결과</h2>
+        <PartLeaderResultView
+          title={`${currentPart === "FRONTEND" ? "프론트엔드" : "백엔드"} 투표 결과`}
+          items={candidates[currentPart].map((candidate) => ({
+            id: candidate.candidateId,
+            name: candidate.name,
+            count: results[currentPart][candidate.candidateId] || 0, // ✅ count -> voteCount로 통일
+          }))}
+          onBack={() => setIsResultView(false)}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="fe-part-vote-panel">
@@ -51,64 +75,44 @@ export default function PartLeaderVoteView({
         ))}
       </div>
 
-      {/* 후보자 목록 렌더링 */}
+      {/* 후보자 목록 */}
       {(currentCandidates?.length ?? 0) === 0 ? (
         <p className="text-center py-10 text-gray-500">
           등록된 후보가 없습니다.
         </p>
       ) : (
         <div className="fe-candidate-grid grid grid-cols-1 md:grid-cols-2 gap-4">
-          {currentCandidates.map((candidate) => {
-            // ✅ 여기서 후보자 정보를 찍어보세요. 콘솔에 { id: 1, name: '...', ... } 이렇게 나오는지 확인!
-            console.log("렌더링되는 후보 정보:", candidate);
-
-            return (
-              <article
-                key={`${currentPart}-${candidate.candidateId}`}
-                className={`fe-candidate-card border p-4 cursor-pointer ${
-                  selectedId === candidate.candidateId
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200"
-                }`}
-                onClick={() => {
-                  console.log("클릭한 후보 ID:", candidate.candidateId); // ✅ 클릭 시 ID 확인
-                  setSelectedId(candidate.candidateId);
-                }}
-              >
-                <h2 className="text-xl font-bold">{candidate.name}</h2>
-                <Button
-                  label="투표하기"
-                  size="large"
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // ✅ 상태 변수를 거치지 말고, 즉시 클릭한 후보의 id를 넘김
-                    onVote(currentPart, candidate.candidateId);
-                  }}
-                />
-              </article>
-            );
-          })}
+          {currentCandidates.map((candidate) => (
+            <article
+              key={`${currentPart}-${candidate.candidateId}`}
+              className={`fe-candidate-card border p-4 cursor-pointer ${
+                selectedId === candidate.candidateId
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200"
+              }`}
+              onClick={() => setSelectedId(candidate.candidateId)}
+            >
+              <h2 className="text-xl font-bold">{candidate.name}</h2>
+              <p>{candidate.team}</p>
+            </article>
+          ))}
         </div>
       )}
+
+      {/* 액션 버튼 */}
       <div className="fe-vote-actions mt-8 flex gap-2">
         <Button
           label="투표하기"
           size="large"
           className="flex-1"
           disabled={selectedId === null || isBusy}
-          onClick={() => {
-            if (selectedId !== null) {
-              console.log("투표 시도 중, ID:", selectedId); // 여기서 값이 찍히는지 확인!
-              onVote(currentPart, selectedId);
-            }
-          }}
+          onClick={() => selectedId !== null && onVote(currentPart, selectedId)}
         />
         <Button
           label="결과보기"
           size="large"
           className="flex-1"
-          onClick={onShowResult}
+          onClick={handleShowResult} // ✅ 수정된 핸들러 연결
         />
         <Button label="돌아가기" size="large" onClick={onBack} />
       </div>

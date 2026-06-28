@@ -9,16 +9,12 @@ interface ProfileViewProps {
   part: PartLeaderPart;
   candidate: PartLeaderCandidate;
   onClose: () => void;
-  imageUrl: string;
-  name: string;
 }
 
 export default function PartLeaderProfileView({
   part,
   candidate,
   onClose,
-  imageUrl,
-  name,
 }: ProfileViewProps) {
   return (
     <section className="profile-card fe-profile-card card-surface rounded-20">
