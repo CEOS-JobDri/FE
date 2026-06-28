@@ -1,7 +1,5 @@
 import { getToken } from "@/utils/auth";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-
 export type VotePartApiValue = "FRONTEND" | "BACKEND";
 
 export interface TeamVoteResultResponse {
@@ -33,7 +31,7 @@ async function fetchVoteApi<T>(
   let response: Response;
 
   try {
-    response = await fetch(`${BASE_URL}${path}`, {
+    response = await fetch(path, {
       ...options,
       headers,
       credentials: "include",
