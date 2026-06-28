@@ -10,7 +10,6 @@ import {
   // verifyEmailCode,
   signup,
 } from "@/services/auth";
-import { saveToken } from "@/utils/auth";
 
 type Step = "email" | "verify" | "name" | "password";
 type Part = "프론트엔드" | "백엔드";
@@ -21,7 +20,7 @@ const MEMBERS: Record<Part, string[]> = {
     "김민서",
     "이윤서",
     "구민교",
-    "김홍연",
+    "김홍엽",
     "오유진",
     "박유민",
     "권오진",
@@ -140,8 +139,7 @@ export default function SignupModal() {
         part: selectedPart === "프론트엔드" ? "FRONTEND" : "BACKEND",
         team: selectedTeam,
       });
-      // 성공 시 로그인 페이지 등 적절한 곳으로 이동
-      router.push("/main");
+      router.push("/login");
     } catch (e) {
       const errorMessage =
         e instanceof Error ? e.message : "회원가입에 실패했습니다.";
