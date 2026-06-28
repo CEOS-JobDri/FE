@@ -1,82 +1,63 @@
-import type {
-  LoginRequest,
-  SignupRequest,
-  AuthResponse,
-  Candidate,
-  CreateCandidateReq,
+// @/services/auth.ts
+import {
+  type LoginRequest,
+  type SignupRequest,
+  type AuthResponse,
+  type Candidate,
+  type CreateCandidateReq,
 } from "@/types/auth";
 
-async function fetchApi<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(path, {
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+
+// ✅ 회원가입 기능 복구
+export async function signup(data: SignupRequest): Promise<void> {
+  const res = await fetch(`${BASE_URL}/api/auth/signup`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(data),
   });
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.message ?? `${res.status} 오류가 발생했습니다.`);
-  }
-
-  const text = await res.text();
-  if (!text) {
-    return {} as T;
-  }
-
-  return JSON.parse(text);
+  if (!res.ok) throw new Error("회원가입 실패");
 }
 
+// ✅ 로그인 기능 복구
 export async function login(data: LoginRequest): Promise<AuthResponse> {
-  return fetchApi<AuthResponse>("/api/auth/login", data);
+  const res = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("로그인 실패");
+  return res.json();
 }
 
-export async function signup(data: SignupRequest): Promise<void> {
-  await fetchApi<void>("/api/auth/signup", data);
+// ✅ 로그아웃 기능 복구
+export async function logout(): Promise<void> {
+  localStorage.removeItem("accessToken");
+  window.location.href = "/login";
 }
 
-// 💡 공통 Fetch 함수 (토큰 자동 포함)
+// ✅ 후보자 목록 가져오기 (인증 헤더 포함)
 async function fetchAdminApi<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  let token = "";
-  if (typeof window !== "undefined") {
-    token = localStorage.getItem("accessToken") || "";
-  }
-
-  const headers = {
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("accessToken") : "";
+  const headers: HeadersInit = {
     "Content-Type": "application/json",
-    // 토큰이 존재하면 Authorization 헤더에 Bearer 방식으로 추가합니다.
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
-  const res = await fetch(path, {
-    ...options,
-    headers,
-  });
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.message ?? `${res.status} 오류가 발생했습니다.`);
-  }
-
-  const text = await res.text();
-  if (!text) return {} as T;
-
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    return text as unknown as T;
-  }
+  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  if (!res.ok) throw new Error(`${res.status} 오류 발생`);
+  return res.json();
 }
 
 export async function getCandidates(
   part: "FRONTEND" | "BACKEND",
 ): Promise<Candidate[]> {
-  return fetchAdminApi<Candidate[]>(`/api/admin/candidates?part=${part}`, {
-    method: "GET",
-  });
+  return fetchAdminApi<Candidate[]>(`/api/admin/candidates?part=${part}`);
 }
 
 export async function createCandidate(data: CreateCandidateReq): Promise<void> {

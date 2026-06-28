@@ -90,9 +90,7 @@ export default function AdminPage() {
       return;
     if (isProcessing) return;
 
-    const updatedCandidates = candidates.filter(
-      (c) => c.candidateId !== candidateId,
-    );
+    const updatedCandidates = candidates.filter((c) => c.id !== candidateId);
     mutate(updatedCandidates, false);
 
     try {
@@ -246,7 +244,7 @@ export default function AdminPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {candidates.map((person) => (
                       <div
-                        key={person.candidateId}
+                        key={person.id}
                         className="flex justify-between items-center p-4 border border-line-neutral-default rounded-12 "
                       >
                         <div className="flex flex-col gap-1">
@@ -263,10 +261,7 @@ export default function AdminPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            handleDeleteCandidate(
-                              person.candidateId,
-                              person.name,
-                            )
+                            handleDeleteCandidate(person.id, person.name)
                           }
                           className="p-2 text-sub14-med text-text-neutral-disabled hover:text-red-primary transition-colors"
                           title="삭제"
