@@ -4,6 +4,7 @@ import { useState } from "react";
 import Button from "@/components/common/Button";
 import { PartLeaderCandidate, PartLeaderPart } from "@/types/profile";
 import PartLeaderResultView from "./ResultView";
+import { VoteResultItem } from "@/types/vote";
 
 interface Props {
   candidates: Record<PartLeaderPart, PartLeaderCandidate[]>;
@@ -50,9 +51,12 @@ export default function PartLeaderVoteView({
         <PartLeaderResultView
           title={`${currentPart === "FRONTEND" ? "프론트엔드" : "백엔드"} 투표 결과`}
           items={candidates[currentPart].map((candidate) => ({
-            id: candidate.candidateId,
+            id: candidate.candidateId.toString(),
             name: candidate.name,
-            count: results[currentPart][candidate.candidateId] || 0, // ✅ count -> voteCount로 통일
+            count: results[currentPart][candidate.candidateId] || 0, // 💡 프로퍼티명을 voteCount로 맞추세요
+            percentage: 0,
+            isVotedCandidate: false,
+            imageUrl: "",
           }))}
           onBack={() => setIsResultView(false)}
         />

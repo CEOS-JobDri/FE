@@ -28,10 +28,11 @@ export function usePartLeaderVote() {
 
       setCandidates((prev) => ({ ...prev, [part]: validCandidates }));
 
-      // 득표수 매핑 (any 제거)
       const newResults: Record<number, number> = {};
-      validCandidates.forEach((c: PartLeaderCandidate) => {
-        newResults[c.candidateId] = c.voteCount ?? 0;
+
+      // ✅ 여기도 깔끔하게 c의 타입을 유추하도록 그냥 둡니다. (이미 validCandidates가 PartLeaderCandidate[]이므로!)
+      validCandidates.forEach((c) => {
+        newResults[c.id] = c.voteCount ?? 0;
       });
 
       setResults((prev) => ({ ...prev, [part]: newResults }));
