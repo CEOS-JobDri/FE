@@ -46,7 +46,7 @@ export interface AuthResponse {
 // }
 
 export interface Candidate {
-  id: number;
+  candidateId: number;
   name: string;
   voteCount: number;
 }
